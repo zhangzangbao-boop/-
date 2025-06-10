@@ -6,8 +6,8 @@ int count(char s[]);//数字符串长度
 //void timetostr(time_t a, char* s);
 
 void transTime(time_t a, char* s);//时间转化年月日时分
+time_t strToTime(char* pTime);//年月日时分转化时间
 
-time_t strToTime(char* pTime);//时间转化time-t
 
 void color(short x);
 

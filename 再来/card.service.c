@@ -288,7 +288,7 @@ Card* doAddmoney(const char* name, const char* code, double* money)
 					{
 						printf("该卡已注销！\a");
 
-					}
+					} 
 					else
 					{
 						//执行充值操作
@@ -497,7 +497,37 @@ void findmost()
 void findunder()
 {
 	if (getCard() == FALSE)
-		return NULL;
+		return;
+
+	char startTimeStr[20];
+	char endTimeStr[20];
+
+	// 提示用户输入起始时间和结束时间
+	int c;
+	while ((c = getchar()) != '\n' && c != EOF) {}
+
+	printf("请输入起始时间 (格式: YYYY-MM-DD HH:MM): ");
+	fgets(startTimeStr, sizeof(startTimeStr), stdin);
+	size_t len = strlen(startTimeStr);
+	if (len > 0 && startTimeStr[len - 1] == '\n')
+		startTimeStr[len - 1] = '\0';
+
+	printf("请输入结束时间 (格式: YYYY-MM-DD HH:MM): ");
+	fgets(endTimeStr, sizeof(endTimeStr), stdin);
+	len = strlen(endTimeStr);
+	if (len > 0 && endTimeStr[len - 1] == '\n')
+		endTimeStr[len - 1] = '\0';
+
+	// 将输入的时间字符串转换为 time_t 类型
+	time_t startTime = strToTime(startTimeStr);
+	time_t endTime = strToTime(endTimeStr);
+
+	// 时间合法性校验
+	if (startTime == -1 || endTime == -1 || startTime > endTime) {
+		printf("输入的时间不合法，请检查格式和范围！\n");
+		return;
+	}
+
 	int flag = 0;
 	lpCardNode pCur = NULL;
 	if (cardList != NULL)
@@ -507,20 +537,23 @@ void findunder()
 
 		while (pCur != NULL)
 		{
-			if (((pCur->data.tLastuse<pCur->data.undertime)&&(pCur->data.Totaluse>50))||pCur->data.vipgress==1&&pCur->data.nStatus!=2)
+			// 检查上次使用时间是否在指定时间段内
+			if (pCur->data.tLastuse >= startTime && pCur->data.tLastuse <= endTime &&
+				(((pCur->data.tLastuse < pCur->data.undertime) && (pCur->data.Totaluse > 50)) ||
+					(pCur->data.vipgress == 1 && pCur->data.nStatus != 2)))
 			{
 				if (flag == 0)
 					printf("账号\t\t总使用金额\t上次使用时间\t\tvip状态\n");  //卡号，总使用金额，上次使用时间,vip
 				flag = 1;
 				char lastime[20] = { 0 };
 				transTime(pCur->data.tLastuse, lastime);
-				printf("%s\t\t%.2lf\t\t%s\t\t%d\n", pCur->data.aNum, pCur->data.Totaluse, lastime,pCur->data.vipgress);
+				printf("%s\t\t%.2lf\t\t%s\t\t%d\n", pCur->data.aNum, pCur->data.Totaluse, lastime, pCur->data.vipgress);
 			}
 			pCur = pCur->next;
 		}
 		if (flag == 0)
 		{
-			printf("本系统暂无潜在用户，请用心经营！\a\n");
+			printf("本系统在指定时间段内暂无潜在用户，请用心经营！\a\n");
 		}
 	}
 }

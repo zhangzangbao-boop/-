@@ -380,7 +380,7 @@ int getCardIndex(const char* aNum)
 void manager()
 {
 	printf("-------查询统计-------\n");
-	printf("请选择查询项目\n1---卡状态查询\n2---活跃用户查询\n3---潜在用户查询\n4---按年（月）统计开卡情况\n5---用户查询\n6---某时间段内消费查询\n");
+	printf("请选择查询项目\n1---卡状态查询\n2---活跃用户查询\n3---统计时间段数据\n4---按年（月）统计开卡情况\n5---用户查询\n6---某时间段内消费查询\n");
 	printf("输入菜单编号：");
 	int choice;
 	scanf("%d", &choice);
@@ -396,7 +396,7 @@ void manager()
 	}break;
 
 	case 3: {
-		//用户的上次使用时间早于某个特定时间（undertime）开卡后的七天且总使用金额超过 50，或者用户是 VIP 用户（vipgress 为 1）
+		//输入时间段，并对时间合法性进行校验，统计这段时间内的数据
 		findunder();
 	}
 		  break;

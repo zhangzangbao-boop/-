@@ -113,3 +113,50 @@ Billing* checkBilling(char* aNum, int* pIndex)
 	}
 	return NULL;
 }
+void statisticsByYearMonth(int year, int month) {
+	int billingCnt = countBilling(BILLINGPATH);
+	if (billingCnt == 0) {
+		printf("没有计费记录。\n");
+		return;
+	}
+	Billing* pBilling = (Billing*)malloc(sizeof(Billing) * billingCnt);
+	if (pBilling == NULL) {
+		printf("内存分配失败。\n");
+		return;
+	}
+	if (readBillingFile(pBilling, BILLINGPATH) == FALSE) {
+		printf("文件读取失败。\n");
+		free(pBilling);
+		return;
+	}
+
+	double totalAmount = 0;
+	int hasRecord = 0;
+
+	printf("%d年%d月上机下机消费情况统计表\n", year, month);
+	// 使用格式化输出，指定每列宽度
+	printf("%-10s %-20s %-20s %-10s\n", "卡号", "上机时间", "下机时间", "消费金额");
+
+	for (int i = 0; i < billingCnt; i++) {
+		struct tm* tmStart = localtime(&pBilling[i].tStart);
+		if (tmStart->tm_year + 1900 == year && tmStart->tm_mon + 1 == month) {
+			char startTime[20], endTime[20];
+			transTime(pBilling[i].tStart, startTime);
+			transTime(pBilling[i].tEnd, endTime);
+			// 使用格式化输出，指定每列宽度
+			printf("%-10s %-20s %-20s %-10.2lf\n", pBilling[i].aNum, startTime, endTime, pBilling[i].fAmount);
+			totalAmount += pBilling[i].fAmount;
+			hasRecord = 1;
+		}
+	}
+
+	if (hasRecord) {
+		// 使用格式化输出，指定每列宽度
+		printf("%-10s %-20s %-20s %-10.2lf\n", "合计", "", "", totalAmount);
+	}
+	else {
+		printf("该时间段内没有消费记录。\n");
+	}
+
+	free(pBilling);
+}
