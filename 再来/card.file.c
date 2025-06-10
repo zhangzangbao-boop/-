@@ -9,6 +9,7 @@
 #include"card.file.h"
 #include"card.service.h"
 
+//将卡信息以二进制形式追加到文件，若文件不存在则创建
 int saveCard(Card* pCard, const char* pPath)  //指向 Card 的指针  字符串路径指针
 {
 	FILE* fp = NULL;
@@ -25,6 +26,7 @@ int saveCard(Card* pCard, const char* pPath)  //指向 Card 的指针  字符串路径指针
 	return TRUE;
 }
 
+//从文件读取所有卡信息到数组，用于初始化链表
 int readFile(Card* pCard, const char* pPath)
 {
 	FILE* fp = NULL;
@@ -56,6 +58,7 @@ int readFile(Card* pCard, const char* pPath)
 	return TRUE;
 }
 
+//统计文件中卡的数量，用于确定数组大小
 int countCard(const char* pPath)
 {
 	FILE* fp = NULL;
@@ -88,6 +91,7 @@ int countCard(const char* pPath)
 	return nIndex;
 }
 
+//更新文件中指定位置的卡信息，通过定位文件指针实现
 int updateCard(Card* pCard, const char* pPath, int nIndex)
 {
 	FILE* fp = NULL;

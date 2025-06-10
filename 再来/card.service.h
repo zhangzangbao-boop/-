@@ -3,6 +3,7 @@
 #include"model.h"
 #ifndef _CARD_SERVICE_H_
 #define _CARD_SERVICE_H_
+extern lpCardNode cardList;
 void releaseCardList();//¡¥±Ì Õ∑≈
 int initCardList();
 int getCard();

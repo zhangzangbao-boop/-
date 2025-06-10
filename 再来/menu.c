@@ -14,60 +14,75 @@ void Outputmenu()
 {
 	printf("欢迎进入计费管理系统\n---------菜单---------\n");
 	printf("1.添加卡\n2.查询卡\n3.上机\n4.下机\n5.充值\n6.退费\n7.查询统计\n8.注销卡\n9.幸运抽奖\n0.退出\n");
-	printf("请选择菜单项编号（0~8)：");
+	printf("请选择菜单项编号（0~9)：");
 }
-void addcard()			    	//添加卡函数
+void addcard()			    	// 开卡功能函数
 {
 	Card card;
-	card.nStatus = 0;			   //未上机
-	card.Totaluse = 0;
-	card.Usecnt = 0;
-	printf("---------添加卡---------\n");
-	printf("请输入卡号<长度为1~18>:");
-	scanf_s("%s", &card.aNum, 20);
-	if (checkCard(card.aNum))
-	{
-		printf("账号已存在！请重新输入:\n");
-		addcard();
+	card.nStatus = 0;			   // 未上机
+	card.Totaluse = 0;             //总使用金额
+	card.Usecnt = 0;               //使用次数
+	printf("---------开卡---------\n");
+	while (1) {
+		printf("请输入卡号<长度为1~18>:");
+		scanf("%s", &card.aNum);
+		if (count(card.aNum) < 1 || count(card.aNum) > 18) {
+			printf("卡号长度不符合要求，请重新输入:\n");
+		}
+		else if (checkCard(card.aNum)) {
+			printf("该卡号已存在，请重新输入:\n");
+		}
+		else {
+			break;
+		}
 	}
-	else
-	{
+
+	while (1) {
 		printf("请输入密码<长度为1~8>:");
-		scanf_s("%s", &card.aCode, 10);
-		if (count(card.aNum) > 18 || count(card.aCode) > 8)
-		{
-			printf("账号或密码长度不合法！请重新输入:\n");
-			addcard();
+		scanf("%s", &card.aCode);
+		if (count(card.aCode) < 1 || count(card.aCode) > 8) {
+			printf("密码长度不符合要求，请重新输入:\n");
 		}
-		else
-		{
-			printf("请输入开卡金额<RMB>\n<单次充值100元及以上可开通vip服务>:");
-			scanf_s("%lf", &card.Balance);
-			card.tStart = card.tLastuse = time(NULL);
-			card.undertime = card.tStart + WEEK;
-			card.tEnd = card.tStart + VALIDITY;  // 有效期 = 开卡时间 + 三年
-			card.Usecnt = 0;
-			card.lucy = 0;
-			card.everytime1[20][20] = NULL;
-			card.everytime2[20][20] = NULL;
-			card.everytime3[20][20] = NULL;
-			card.everytime4[20][20] = NULL;
-			if (card.Balance >= 100)
-			{
-				card.vipgress = 1;
-				card.lucy = 1;
-			}
-			else card.vipgress = 0;
-			if (saveCard(&card, CARDPATH))   //将卡信息写入文件
-			{
-				printf("添加卡信息成功！\n");
-				printf("卡号\t密码\t余额\t卡状态\tvip状态\t抽奖次数\n");
-				printf("%s\t%s\t%.2lf\t%d\t%d\t%d\n", card.aNum, card.aCode, card.Balance, card.nStatus,card.vipgress,card.lucy);
-			}
+		else {
+			break;
 		}
+	}
+
+	double inputMoney;
+	while (1) {
+		printf("请输入开卡金额<RMB>\n<首次充值100元以上可开通vip权限>:");
+		scanf("%lf", &inputMoney);
+		if (inputMoney < 0) {
+			printf("开卡金额不能为负数，请重新输入。\n");
+		}
+		else {
+			break;
+		}
+	}
+	card.Balance = inputMoney;//余额
+	card.tStart = card.tLastuse = time(NULL);
+	card.undertime = card.tStart + WEEK;
+	card.tEnd = card.tStart + VALIDITY;  // 有效期 = 当前时间 + 时长
+	card.Usecnt = 0;//使用次数
+	card.lucy = 0;
+	memset(card.everytime1, 0, sizeof(card.everytime1));
+	memset(card.everytime2, 0, sizeof(card.everytime2));
+	memset(card.everytime3, 0, sizeof(card.everytime3));
+	memset(card.everytime4, 0, sizeof(card.everytime4));
+	if (card.Balance >= 100)//余额
+	{
+		card.vipgress = 1;
+		card.lucy = 1;
+	}
+	else card.vipgress = 0;
+	if (saveCard(&card, CARDPATH))   // 将卡信息写入文件
+	{
+		card.nStatus = 0;			   // 未上机
+		printf("开卡信息成功！\n");
+		printf("卡号\t密码\t余额\t卡状态\tvip状态\t幸运次数\n");
+		printf("%s\t%s\t%.2lf\t%d\t%d\t%d\n", card.aNum, card.aCode, card.Balance, card.nStatus, card.vipgress, card.lucy);
 	}
 }
-
 void query()
 {
 	printf("---------查询卡---------\n");
@@ -110,7 +125,7 @@ void query()
 	}
 	break;
 	default: printf("输入有误！\a\n"); break;
-	          } 
+    } 
 }
 
 void logon()
@@ -123,7 +138,7 @@ void logon()
 	scanf_s("%s", aNum, 20);
 	printf("请输入密码<长度为1~8>:");
 	scanf_s("%s", aCode, 10);
-	pCard = doLogonInfo(aNum, aCode);
+	pCard = doLogonInfo(aNum, aCode);//处理用户上机操作，验证用户信息并创建新的消费记录
 	if (pCard != NULL)
 	{
 		if (pCard->vipgress == 1)
@@ -163,7 +178,7 @@ void settle()
 	scanf_s("%s", aNum, 20);
 	printf("请输入密码<长度为1~8>:");
 	scanf_s("%s", aCode, 10);
-	pCard = doSettleInfo(aNum, aCode, &fAmount);
+	pCard = doSettleInfo(aNum, aCode, &fAmount); //处理用户下机操作，计算消费金额并更新卡和账单状态
 	if (pCard != NULL)
 	{
 		if (pCard->vipgress == 1)
@@ -196,27 +211,47 @@ void addmoney()
 	double money = 0;
 	char aNum[20] = { 0 };
 	char aCode[10] = { 0 };
-	printf("请输入卡号<长度为1~18>：");
-	scanf_s("%s", aNum, 20);
-	printf("请输入密码<长度为1~8>:");
-	scanf_s("%s", aCode, 10);
-	printf("请输入充值金额\n<单次充值超过100元及以上可解锁vip服务>:");
-	scanf("%lf", &money);
-	pCard = doAddmoney(aNum, aCode, &money);
-	if (pCard != NULL&&pCard->nStatus==0)
-	{
-		printf("充值成功！\n");
-		printf("-----充值信息如下-----\n");
-		printf("卡号\t\t充值金额\t余额\n");
-		printf("%s\t\t%.2lf\t\t%.2lf\n", pCard->aNum, money, pCard->Balance);
-	}
-	else
-	{
-		if (pCard->nStatus == 1)
-		{
-			printf("该卡正在上机！\a\n");
+	int validInput = 0;
+
+	while (!validInput) {
+		printf("请输入卡号<长度为1~18>:");
+		scanf_s("%s", aNum, 20);
+		printf("请输入密码<长度为1~8>:");
+		scanf_s("%s", aCode, 10);
+
+		// 调用 doAddmoney 函数进行充值操作，传入卡号、密码和充值金额的指针
+		pCard = doAddmoney(aNum, aCode, &money);
+		if (pCard != NULL && pCard->nStatus == 0) {
+			validInput = 1;
 		}
-		printf("充值失败！\a\n");
+		else {
+			if (pCard != NULL && pCard->nStatus == 1) {
+				printf("该用户正在上机，请先下机再充值！\n");
+			}
+			else {
+				printf("卡号或密码错误，请重新输入！\n");
+			}
+		}
+	}
+
+	if (pCard != NULL && pCard->nStatus == 0) {
+		printf("请输入充值金额\n<单次充值金额100元及以上可开通vip账户>:");
+		scanf("%lf", &money);
+		pCard = doAddmoney(aNum, aCode, &money);
+		// 添加充值金额检查
+		if (money <= 0) {
+			printf("充值金额必须为正数，请重新操作。\n");
+			return;
+		}
+		if (pCard != NULL && pCard->nStatus == 0) {
+			printf("充值成功！\n");
+			printf("-----充值信息如下-----\n");
+			printf("卡号\t\t充值金额\t余额\n");
+			printf("%s\t\t%.2lf\t\t%.2lf\n", pCard->aNum, money, pCard->Balance);
+		}
+		else {
+			printf("充值失败！\n");
+		}
 	}
 }
 
@@ -227,22 +262,35 @@ void returnmoney()
 	double money = 0;
 	char aNum[20] = { 0 };
 	char aCode[10] = { 0 };
-	printf("请输入卡号<长度为1~18>：");
-	scanf_s("%s", aNum, 20);
-	printf("请输入密码<长度为1~8>:");
-	scanf_s("%s", aCode, 10);
-	printf("请输入退还金额：");
-	scanf("%lf", &money);
-	pCard = doReturnmoney(aNum, aCode, &money);
-	if (pCard != NULL)
-	{
-		printf("-----退费信息如下-----\n");
-		printf("卡号\t\t退还金额\t余额\n");
-		printf("%s\t\t%.2lf\t\t%.2lf\n", pCard->aNum, money, pCard->Balance);
+	int validInput = 0;
+
+	while (!validInput) {
+		printf("请输入卡号<长度为1~18>:");
+		scanf_s("%s", aNum, 20);
+		printf("请输入密码<长度为1~8>:");
+		scanf_s("%s", aCode, 10);
+
+		pCard = doReturnmoney(aNum, aCode, &money);
+		if (pCard != NULL) {
+			validInput = 1;
+		}
+		else {
+			printf("卡号或密码错误，请重新输入！\n");
+		}
 	}
-	else
-	{
-		printf("退费失败！\a\n");
+
+	if (pCard != NULL) {
+		printf("请输入退费金额：");
+		scanf("%lf", &money);
+		pCard = doReturnmoney(aNum, aCode, &money);
+		if (pCard != NULL) {
+			printf("-----退费信息如下-----\n");
+			printf("卡号\t\t退费金额\t余额\n");
+			printf("%s\t\t%.2lf\t\t%.2lf\n", pCard->aNum, money, pCard->Balance);
+		}
+		else {
+			printf("退费失败！\n");
+		}
 	}
 }
 
@@ -254,39 +302,85 @@ void cancel()
 	char aCode[10] = { 0 };
 	printf("请输入卡号<长度为1~18>：");
 	scanf_s("%s", aNum, 20);
-	printf("请输入密码<长度为1~8>:");
+	printf("请输入密码<长度为1~8>：");
 	scanf_s("%s", aCode, 10);
 
-	pCard = doCancel(aNum, aCode);
-	if (pCard != NULL)
+	// 先不调用 doCancel，直接检查卡是否存在
+	if (checkCard(aNum))
 	{
-		printf("--------卡信息---------\n");
-		printf("卡号\t余额\tvip状态\t抽奖次数\t\n");
-		printf("%s\t%.2lf\t%d\t%d\n", pCard->aNum, pCard->Balance, pCard->vipgress, pCard->lucy);
-		printf("是否确定注销该卡（1---是 2---否）：");
-		int choice;
-		scanf("%d", &choice);
-		if (choice == 1)
+		// 获取卡信息
+		pCard = quaryCard(aNum);
+		if (pCard != NULL)
 		{
-			printf("-----注销信息如下-----\n");
-			printf("卡号\t\t退还金额\n");
-			printf("%s\t\t%.2lf\n", pCard->aNum, pCard->Balance);
-		}
-		if (choice == 2)
-		{
-			printf("注销失败！\a\n");
+			printf("--------用户信息---------\n");
+			printf("卡号\t余额\tvip状态\t抽奖次数\t\n");
+			printf("%s\t%.2lf\t%d\t%d\n", pCard->aNum, pCard->Balance, pCard->vipgress, pCard->lucy);
+			printf("是否确认注销该用户？1---是 2---否：");
+			int choice;
+			scanf("%d", &choice);
+			if (choice == 1)
+			{
+				double money = pCard->Balance;
+				Card* refundCard = doReturnmoney(aNum, aCode, &money);
+				if (refundCard != NULL)
+				{
+					// 退费成功后，将卡状态设置为已注销
+					pCard->nStatus = 2;
+					int index = getCardIndex(aNum);
+					if (index != -1 && updateCard(pCard, CARDPATH, index))
+					{
+						printf("-----注销信息如下-----\n");
+						printf("卡号\t\t退费金额\n");
+						printf("%s\t\t%.2lf\n", pCard->aNum, money);
+						printf("注销成功！\n");
+					}
+					else
+					{
+						printf("更新卡状态失败！\a\n");
+					}
+				}
+				else
+				{
+					printf("退费失败！\a\n");
+				}
+			}
+			if (choice == 2)
+			{
+				printf("注销失败！\a\n");
+			}
 		}
 	}
 	else
 	{
-		printf("该卡不存在！\a\n");
+		printf("该用户不存在！\a\n");
 	}
+}
+
+// 获取卡的索引
+int getCardIndex(const char* aNum)
+{
+	if (getCard() == FALSE)
+	{
+		return -1;
+	}
+	lpCardNode pCur = cardList->next;
+	int index = 0;
+	while (pCur != NULL)
+	{
+		if (strcmp(pCur->data.aNum, aNum) == 0)
+		{
+			return index;
+		}
+		pCur = pCur->next;
+		index++;
+	}
+	return -1;
 }
 
 void manager()
 {
 	printf("-------查询统计-------\n");
-	printf("请选择查询项目\n1---卡状态查询\n2---活跃用户查询\n3---潜在用户查询\n4---营业额统计\n5---用户查询\n6---某时间段内消费查询\n");
+	printf("请选择查询项目\n1---卡状态查询\n2---活跃用户查询\n3---潜在用户查询\n4---按年（月）统计开卡情况\n5---用户查询\n6---某时间段内消费查询\n");
 	printf("输入菜单编号：");
 	int choice;
 	scanf("%d", &choice);
@@ -297,10 +391,12 @@ void manager()
 	}break;
 	case 2:
 	{
+		//非注销状态下，普通用户（vipgress 为 0）总使用金额超过 100，或者 VIP 用户（vipgress 为 1）总使用金额大于等于 70
 		findmost();
 	}break;
 
 	case 3: {
+		//用户的上次使用时间早于某个特定时间（undertime）开卡后的七天且总使用金额超过 50，或者用户是 VIP 用户（vipgress 为 1）
 		findunder();
 	}
 		  break;

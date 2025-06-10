@@ -12,4 +12,6 @@
 #define CHARGE 1
 #define VALIDITY (3*365*24*3600)
 #define WEEK (7*24*3600)
+
+#define MIN_BALANCE 50.0 // 这里假设特定值为 50 元
 #endif // _GLOBAL_H_

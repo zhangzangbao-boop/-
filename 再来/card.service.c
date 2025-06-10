@@ -6,7 +6,10 @@
 #include"global.h"
 #include"card.file.h"
 #include"card.service.h"
+#include "billing.file.h"
 #include"tool.h"
+
+extern lpBillingNode BillingList;
 
 void timetostr(time_t a, char* s)   //将时间转化为年月日
 {
@@ -15,6 +18,7 @@ void timetostr(time_t a, char* s)   //将时间转化为年月日
 	strftime(s, 20, "%Y-%m-%d", timeinfo);
 }
 lpCardNode cardList = NULL;
+
 int initCardList()//链表初始化函数
 {
 	lpCardNode pHead = NULL;
@@ -137,6 +141,7 @@ int getCard()
 	initCardList();
 	node = cardList;
 	//逐条建立链表
+	//尾插法实现
 	for (i = 0; i < cardCnt; i++)
 	{
 		if ((pCur = (lpCardNode)malloc(sizeof(CardNode))) == NULL)
@@ -150,9 +155,9 @@ int getCard()
 		pCur->next = NULL;
 		while (node->next != NULL)
 		{
-			node = node->next;
+			node = node->next;// 遍历链表找到尾节点
 		}
-		node->next = pCur;
+		node->next = pCur; // 插入新节点到尾部
 	}
 	//释放结构体数组内存
 	free(pCard);
@@ -162,7 +167,7 @@ int getCard()
 Card* doLogon(char* aNum, char* aCode)
 {
 	int nIndex = 0;
-	//建立链表并判断是否成功
+	// 加载卡信息并判断是否成功
 	if (getCard() == FALSE)
 	{
 		return NULL;
@@ -171,37 +176,37 @@ Card* doLogon(char* aNum, char* aCode)
 	if (cardList != NULL)
 	{
 		pCur = cardList->next;
-		//遍历链表
+		// 遍历链表查找卡号
 		while (pCur != NULL)
 		{
 			if (strcmp(pCur->data.aNum, aNum) == 0)
 			{
-				//卡要未注销
+				// 需要未注销
 				if (pCur->data.nStatus != 2)
 				{
-					//卡密码需要输入正确
+					// 密码需要输入正确
 					if (strcmp(pCur->data.aCode, aCode) != 0)
 					{
-						printf("密码错误！\n");
+						printf("密码输入错误\n");
 						return NULL;
 					}
-					//卡余额要大于零
-					if (pCur->data.Balance <= 0)
+					// 余额需要足够
+					if (pCur->data.Balance < MIN_BALANCE)
 					{
-						printf("余额不足！\n");
+						printf("卡内余额低于 %.2lf 元，请充值后再上机。\n", MIN_BALANCE);
 						return NULL;
 					}
-					//卡要处于未上机状态
+					// 需要处于未上机状态
 					if (pCur->data.nStatus == 1)
 					{
-						printf("该卡正在上机！\n");
+						printf("该卡已上机\n");
 						return NULL;
 					}
-					//修改卡上机状态，开始计时
+					// 修改卡上机状态和使用时间
 					pCur->data.nStatus = 1;
 					pCur->data.Usecnt++;
 					pCur->data.tLastuse = time(NULL);
-					//判断是否将修改后的卡信息成功存入文件
+					// 判断是否成功将修改后的卡信息保存到文件
 					if (FALSE != updateCard(&pCur->data, CARDPATH, nIndex))
 					{
 						return &pCur->data;
@@ -212,7 +217,7 @@ Card* doLogon(char* aNum, char* aCode)
 			nIndex++;
 		}
 	}
-	printf("该账号不存在！\n");
+	printf("该卡号不存在。\n");
 	return NULL;
 }
 Card* doSettle(char* aNum, char* aCode, int* nIndex)
@@ -227,9 +232,9 @@ Card* doSettle(char* aNum, char* aCode, int* nIndex)
 		pCur = cardList->next;
 		while (pCur != NULL)
 		{
-			if (strcmp(pCur->data.aNum, aNum) == 0)
+			if (strcmp(pCur->data.aNum, aNum) == 0) // 找到匹配卡号
 			{
-				if (pCur->data.nStatus != 2)
+				if (pCur->data.nStatus != 2)  // 卡未注销
 				{
 					if (strcmp(pCur->data.aCode, aCode) != 0)
 					{
@@ -258,17 +263,19 @@ Card* doSettle(char* aNum, char* aCode, int* nIndex)
 Card* doAddmoney(const char* name, const char* code, double* money)
 {
 	int index = 0;
-	if (getCard() == FALSE)
+	if (getCard() == FALSE)  //读取卡片信息失败
 	{
 		return NULL;
 	}
+
+	//遍历卡片列表查找匹配卡号
 	lpCardNode pCur = NULL;
 	if (cardList != NULL)
 	{
 		pCur = cardList->next;
 		while (pCur != NULL)
 		{
-			if (strcmp(pCur->data.aNum, name) == 0)
+			if (strcmp(pCur->data.aNum, name) == 0)//找到匹配卡号
 			{
 				if (strcmp(pCur->data.aCode, code) != 0)
 				{
@@ -284,11 +291,13 @@ Card* doAddmoney(const char* name, const char* code, double* money)
 					}
 					else
 					{
+						//执行充值操作
 						pCur->data.Balance += *money;
 						if (*money >= 100&&pCur->data.vipgress==0)
 						{
 							pCur->data.vipgress = 1;
 						}
+						//保存更新到文件
 						if (FALSE != updateCard(&pCur->data, CARDPATH, index))
 						{
 							return &pCur->data;
@@ -515,29 +524,90 @@ void findunder()
 		}
 	}
 }
+void totalMoney() {
+	int choice;
+	printf("请选择统计类型：1 - 按年统计；2 - 按月统计：");
+	scanf("%d", &choice);
 
-void totalMoney()
-{
-	double num1 = 0, num2=0;
-	double max;
-	if (getCard() == FALSE)
-	{
-		return NULL;
+	int year, month;
+	if (choice == 1) {
+		printf("请输入要统计的年份：");
+		scanf("%d", &year);
+		month = 0; // 按年统计时，月份设为 0
 	}
-	lpCardNode pCur = NULL;
-	if (cardList != NULL)
-	{
-		pCur = cardList->next;
-		while (pCur != NULL)
-		{
-			num1 += pCur->data.Totaluse;
-			num2 += pCur->data.Totaluse + pCur->data.Balance;
-			pCur = pCur->next;
+	else if (choice == 2) {
+		printf("请输入要统计的年份和月份（格式：YYYY MM）：");
+		scanf("%d %d", &year, &month);
+	}
+	else {
+		printf("输入无效，请重新选择。\n");
+		return;
+	}
+
+	// 按年（月）统计开卡情况
+	if (getCard() == FALSE) {
+		return;
+	}
+	lpCardNode pCur = cardList->next;
+	int openCardCount = 0;
+	double totalRecharge = 0;
+
+	printf("\n%d年", year);
+	if (month != 0) {
+		printf("%d月", month);
+	}
+	printf("开卡情况统计表\n");
+	// 使用固定宽度格式化输出表头
+	printf("%-10s %-20s %-10s\n", "卡号", "开卡时间", "首次充值金额");
+
+	while (pCur != NULL) {
+		struct tm* tm_info;
+		tm_info = localtime(&pCur->data.tStart);
+		if (tm_info->tm_year + 1900 == year && (month == 0 || tm_info->tm_mon + 1 == month)) {
+			char start_time[20];
+			transTime(pCur->data.tStart, start_time);
+			// 使用固定宽度格式化输出每条记录
+			printf("%-10s %-20s %.2lf\n", pCur->data.aNum, start_time, pCur->data.Balance);
+			openCardCount++;
+			totalRecharge += pCur->data.Balance;
 		}
-		printf("营业以来，共有用户充值%.2lf元，共有用户使用%.2lf元\n", num2, num1);
+		pCur = pCur->next;
 	}
-}
+	printf("合计\t开卡数：%d\t金额：%.2lf\n", openCardCount, totalRecharge);
 
+	// 按年（月）统计上机下机消费情况
+	if (getBilling() == FALSE) {
+		return;
+	}
+	lpBillingNode pBillingCur = BillingList->next;
+	double totalConsumption = 0;
+
+	printf("\n%d年", year);
+	if (month != 0) {
+		printf("%d月", month);
+	}
+	printf("上机下机消费情况统计表\n");
+	// 使用固定宽度格式化输出表头
+	printf("%-10s %-20s %-20s %-10s\n", "卡号", "上机时间", "下机时间", "消费金额");
+
+	while (pBillingCur != NULL) {
+		struct tm* start_tm_info;
+		start_tm_info = localtime(&pBillingCur->data.tStart);
+		struct tm* end_tm_info;
+		end_tm_info = localtime(&pBillingCur->data.tEnd);
+		if (start_tm_info->tm_year + 1900 == year && (month == 0 || start_tm_info->tm_mon + 1 == month)) {
+			char start_time[20];
+			transTime(pBillingCur->data.tStart, start_time);
+			char end_time[20];
+			transTime(pBillingCur->data.tEnd, end_time);
+			// 使用固定宽度格式化输出每条记录
+			printf("%-10s %-20s %-20s %.2lf\n", pBillingCur->data.aNum, start_time, end_time, pBillingCur->data.fAmount);
+			totalConsumption += pBillingCur->data.fAmount;
+		}
+		pBillingCur = pBillingCur->next;
+	}
+	printf("合计\t%.2lf\n", totalConsumption);
+}
 void checkUser()
 {
 	if (getCard() == FALSE)

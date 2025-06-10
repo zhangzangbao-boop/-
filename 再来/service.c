@@ -21,21 +21,21 @@ void releaseList()
 Card* doLogonInfo(char* aNum, char* aCode)
 {
 	Card* pCard = NULL;
-	pCard = doLogon(aNum, aCode);
+	pCard = doLogon(aNum, aCode);  // 调用登录验证函数
 	if (pCard == NULL)
 	{
 		return NULL;
 	}
 	Billing billing;
-	strcpy(billing.aNum, pCard->aNum);
-	billing.tStart = time(NULL);
-	billing.fAmount = 0;
-	billing.tEnd = time(NULL);
-	billing.nStatus = 0;
-	billing.fBalance = pCard->Balance;
-	billing.nDel = 0;
-	billing.vipgress = pCard->vipgress;
-	if (TRUE == saveBilling(&billing, BILLINGPATH))
+	strcpy(billing.aNum, pCard->aNum);  // 复制卡号到账单
+	billing.tStart = time(NULL);  // 记录上机时间
+	billing.fAmount = 0;  // 初始消费金额为0
+	billing.tEnd = time(NULL);  // 下机时间初始化为当前时间
+	billing.nStatus = 0;  // 结算状态：未结算
+	billing.fBalance = pCard->Balance;  // 记录当前余额
+	billing.nDel = 0;  // 删除状态：未删除
+	billing.vipgress = pCard->vipgress;  // 记录VIP等级
+	if (TRUE == saveBilling(&billing, BILLINGPATH))  // 保存账单信息到文件
 	{
 		return pCard;
 	}
@@ -43,32 +43,45 @@ Card* doLogonInfo(char* aNum, char* aCode)
 }
 Card* doSettleInfo(char* aNum, char* aCode, double* fAmount)
 {
-	//卡消费信息与基本信息在文件中的索引号
+	// 获取卡信息和账单信息文件中的位置
 	int nIndexb = 0;
 	int nIndexc = 0;
 	Card* pCard = NULL;
-	//在获取卡信息同时获取其位置索引号
-	pCard = doSettle(aNum, aCode, &nIndexc);
+	// 在获取卡信息同时获取位置索引
+	pCard = doSettle(aNum, aCode, &nIndexc);// 调用结算验证函数
 	Billing* pBilling = NULL;
-	pBilling = checkBilling(aNum, &nIndexb);
+	pBilling = checkBilling(aNum, &nIndexb);// 获取未结算的账单
 	if (pBilling != NULL)
 	{
-		//组装卡消费信息
-		pBilling->tEnd = time(0);
-		pBilling->fAmount = getAmount(pBilling->tStart,pCard->vipgress);
-		*fAmount = pBilling->fAmount;
-		pBilling->nStatus = 1;
+		// 封装结算信息
+		pBilling->tEnd = time(0);  // 记录下机时间
+		pBilling->fAmount = getAmount(pBilling->tStart, pCard->vipgress);  // 计算消费金额
+		*fAmount = pBilling->fAmount;  // 通过指针返回消费金额
+		pBilling->nStatus = 1;  // 标记账单为"已结算"
+		pBilling->fBalance -= pBilling->fAmount;  // 更新余额
+		pCard->nStatus = 0;  // 更新卡状态为"未上机"
+
+		// 检查余额是否足够
+		if (pCard->Balance < pBilling->fAmount)
+		{
+			printf("卡内余额不足，请充值后再下机。\n");
+			return NULL;
+		}
+
 		pBilling->fBalance -= pBilling->fAmount;
-		//组装卡基本信息
+		// 封装卡信息  记录上机/下机时间
 		pCard->nStatus = 0;
 		timetostr(pCard->tLastuse, pCard->everytime3[pCard->Usecnt - 1]);
-		transTime(pCard->tLastuse, pCard->everytime1[pCard->Usecnt-1]);
+		transTime(pCard->tLastuse, pCard->everytime1[pCard->Usecnt - 1]);
 		pCard->tLastuse = time(NULL);
 		timetostr(pCard->tLastuse, pCard->everytime4[pCard->Usecnt - 1]);
-		transTime(pCard->tLastuse, pCard->everytime2[pCard->Usecnt-1]);
-		pCard->Totaluse += pBilling->fAmount;
-		pCard->Balance = pBilling->fBalance;
-		pCard->everymoney[pCard->Usecnt-1] = pBilling->fAmount;
+		transTime(pCard->tLastuse, pCard->everytime2[pCard->Usecnt - 1]);
+
+		pCard->Totaluse += pBilling->fAmount;  // 更新总使用时长
+		pCard->Balance = pBilling->fBalance;  // 更新卡余额
+		pCard->everymoney[pCard->Usecnt - 1] = pBilling->fAmount;  // 记录本次消费金额
+
+		// 根据消费金额增加抽奖次数
 		if (pCard->vipgress == 1 && pBilling->fAmount >= 10)
 		{
 			pCard->lucy++;
@@ -77,7 +90,7 @@ Card* doSettleInfo(char* aNum, char* aCode, double* fAmount)
 		{
 			pCard->lucy++;
 		}
-		//将修改后的信息保存到文件中
+		// 更新卡信息和账单信息到文件
 		if ((TRUE == updateBilling(pBilling, BILLINGPATH, nIndexb)) && (TRUE == updateCard(pCard, CARDPATH, nIndexc)))
 		{
 			return pCard;
@@ -85,7 +98,6 @@ Card* doSettleInfo(char* aNum, char* aCode, double* fAmount)
 	}
 	return NULL;
 }
-
 void queryInfo()
 {
 	char str[20] = { 0 };
