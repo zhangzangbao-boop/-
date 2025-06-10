@@ -380,40 +380,22 @@ int getCardIndex(const char* aNum)
 void manager()
 {
 	printf("-------查询统计-------\n");
-	printf("请选择查询项目\n1---卡状态查询\n2---活跃用户查询\n3---统计时间段数据\n4---按年（月）统计开卡情况\n5---用户查询\n6---某时间段内消费查询\n");
+	printf("请选择查询项目\n1---充值退费明细\n2---按年（月）统计开卡和上机下机情况\n");
 	printf("输入菜单编号：");
 	int choice;
 	scanf("%d", &choice);
 	switch (choice)
 	{
 	case 1: {
-		checkcardStd();
-	}break;
-	case 2:
-	{
-		//非注销状态下，普通用户（vipgress 为 0）总使用金额超过 100，或者 VIP 用户（vipgress 为 1）总使用金额大于等于 70
-		findmost();
-	}break;
-
-	case 3: {
-		//输入时间段，并对时间合法性进行校验，统计这段时间内的数据
+		//按年（月）统计充值退费情况，需要有充值退费的明细和汇总
 		findunder();
 	}
 		  break;
-	case 4:
+	case 2:
 	{
 		totalMoney();
 	}
 		  break;
-	case 5:
-	{
-		checkUser();
-	}
-	break;
-	case 6:
-	{
-		checkdate();
-	}
 	break;
 	default: printf("您输入有误！\a\n"); break;
 	}

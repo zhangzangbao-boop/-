@@ -15,11 +15,7 @@ Card* doAddmoney(const char* name, const char* code, double* money);
 Card* doReturnmoney(const char* name, const char* code, double* money);
 Card* doCancel(const char* name, const char* code);
 Card* queryCards(const char* pName, int* pIndex);
-void findmost();
-void checkcardStd();
 void findunder();
 void totalMoney();
-void checkUser();
 Card* getlucky(const char* name, const char* code,int* nIndex);
-void checkdate();
 #endif // !_CARD_SERVICE_H_

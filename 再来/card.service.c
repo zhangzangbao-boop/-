@@ -441,119 +441,88 @@ Card* queryCards(const char* pName, int* pIndex)
 	return pCard;
 }
 
-void checkcardStd()
-{
-	if (getCard() == FALSE)
-		return NULL;
-	int num1 = 0, num2 = 0, num3 = 0;
-	lpCardNode pCur = NULL;
-	if (cardList != NULL)
-	{
-		pCur = cardList->next;
-		while (pCur != NULL)
-		{
-			if (pCur->data.nStatus == 0 || pCur->data.nStatus == 1)
-				num2++;
-			if (pCur->data.nStatus == 2)
-				num3++;
-			pCur = pCur->next;
-			num1++;
-		}
-	}
-	printf("截止目前，共有%d张卡已注册，有%d张卡仍然在使用中，有%d张卡已经办理注销\n", num1, num2, num3);
-}
 
-void findmost()
-{
-	if (getCard() == FALSE)
-		return NULL;
-	int flag = 0;
-	lpCardNode pCur = NULL;
-	if (cardList != NULL)
-	{
-		printf("-----活跃用户信息-----\n");
-		pCur = cardList->next;
-
-		while (pCur != NULL)
-		{
-			if ((pCur->data.vipgress==0&&pCur->data.Totaluse > 100)||(pCur->data.vipgress==1&&pCur->data.Totaluse>=70)&&pCur->data.nStatus!=2)
-			{
-				if (flag == 0)
-					printf("账号\t\t总使用金额\t上次使用时间\t\tvip状态\n");  //卡号，总使用金额，上次使用时间
-				flag = 1;
-				char lastime[20] = { 0 };
-				transTime(pCur->data.tLastuse, lastime);
-				printf("%s\t\t%.2lf\t\t%s\t\t%d\n", pCur->data.aNum, pCur->data.Totaluse, lastime,pCur->data.vipgress);
-			}
-			pCur = pCur->next;
-		}
-		if (flag == 0)
-		{
-			printf("本系统暂无活跃用户，请用心经营！\a\n");
-		}
-	}
-}
 
 void findunder()
 {
 	if (getCard() == FALSE)
 		return;
 
-	char startTimeStr[20];
-	char endTimeStr[20];
+	char yearMonthStr[20];
+	int year, month;
 
-	// 提示用户输入起始时间和结束时间
+	// 提示用户输入统计的年月
 	int c;
 	while ((c = getchar()) != '\n' && c != EOF) {}
 
-	printf("请输入起始时间 (格式: YYYY-MM-DD HH:MM): ");
-	fgets(startTimeStr, sizeof(startTimeStr), stdin);
-	size_t len = strlen(startTimeStr);
-	if (len > 0 && startTimeStr[len - 1] == '\n')
-		startTimeStr[len - 1] = '\0';
+	printf("请输入要统计的年月 (格式: YYYY-MM): ");
+	fgets(yearMonthStr, sizeof(yearMonthStr), stdin);
+	size_t len = strlen(yearMonthStr);
+	if (len > 0 && yearMonthStr[len - 1] == '\n')
+		yearMonthStr[len - 1] = '\0';
 
-	printf("请输入结束时间 (格式: YYYY-MM-DD HH:MM): ");
-	fgets(endTimeStr, sizeof(endTimeStr), stdin);
-	len = strlen(endTimeStr);
-	if (len > 0 && endTimeStr[len - 1] == '\n')
-		endTimeStr[len - 1] = '\0';
-
-	// 将输入的时间字符串转换为 time_t 类型
-	time_t startTime = strToTime(startTimeStr);
-	time_t endTime = strToTime(endTimeStr);
-
-	// 时间合法性校验
-	if (startTime == -1 || endTime == -1 || startTime > endTime) {
-		printf("输入的时间不合法，请检查格式和范围！\n");
+	// 解析输入的年月
+	if (sscanf(yearMonthStr, "%d-%d", &year, &month) != 2) {
+		printf("输入的格式不正确，请使用 YYYY-MM 格式！\n");
 		return;
 	}
+
+	// 计算该月的起始时间和结束时间
+	struct tm startTm = { 0 };
+	startTm.tm_year = year - 1900;
+	startTm.tm_mon = month - 1;
+	startTm.tm_mday = 1;
+	startTm.tm_hour = 0;
+	startTm.tm_min = 0;
+	startTm.tm_sec = 0;
+	time_t startTime = mktime(&startTm);
+
+	struct tm endTm = startTm;
+	endTm.tm_mon++;
+	time_t endTime = mktime(&endTm);
+
+	double totalRecharge = 0;
+	double totalRefund = 0;
 
 	int flag = 0;
 	lpCardNode pCur = NULL;
 	if (cardList != NULL)
 	{
-		printf("-----潜在用户信息-----\n");
+		printf("----- %d 年 %d 月充值退费明细 -----\n", year, month);
+		printf("账号\t\t操作类型\t金额\t操作时间\n");
 		pCur = cardList->next;
 
 		while (pCur != NULL)
 		{
-			// 检查上次使用时间是否在指定时间段内
-			if (pCur->data.tLastuse >= startTime && pCur->data.tLastuse <= endTime &&
-				(((pCur->data.tLastuse < pCur->data.undertime) && (pCur->data.Totaluse > 50)) ||
-					(pCur->data.vipgress == 1 && pCur->data.nStatus != 2)))
-			{
-				if (flag == 0)
-					printf("账号\t\t总使用金额\t上次使用时间\t\tvip状态\n");  //卡号，总使用金额，上次使用时间,vip
-				flag = 1;
-				char lastime[20] = { 0 };
-				transTime(pCur->data.tLastuse, lastime);
-				printf("%s\t\t%.2lf\t\t%s\t\t%d\n", pCur->data.aNum, pCur->data.Totaluse, lastime, pCur->data.vipgress);
+			for (int i = 0; i < pCur->data.Usecnt; i++) {
+				time_t opTime = strToTime(pCur->data.everytime1[i]);
+				if (opTime >= startTime && opTime < endTime) {
+					if (pCur->data.everymoney[i] > 0) {
+						// 充值操作
+						totalRecharge += pCur->data.everymoney[i];
+						printf("%s\t\t充值\t\t%.2lf\t%s\n", pCur->data.aNum, pCur->data.everymoney[i], pCur->data.everytime1[i]);
+						flag = 1;
+					}
+					else if (pCur->data.everymoney[i] < 0) {
+						// 退费操作
+						totalRefund += -pCur->data.everymoney[i];
+						printf("%s\t\t退费\t\t%.2lf\t%s\n", pCur->data.aNum, -pCur->data.everymoney[i], pCur->data.everytime1[i]);
+						flag = 1;
+					}
+				}
 			}
 			pCur = pCur->next;
 		}
+
 		if (flag == 0)
 		{
-			printf("本系统在指定时间段内暂无潜在用户，请用心经营！\a\n");
+			printf("本系统在指定时间段内暂无充值退费记录，请继续关注！\a\n");
+		}
+		else
+		{
+			printf("----- %d 年 %d 月充值退费汇总 -----\n", year, month);
+			printf("充值总金额: %.2lf 元\n", totalRecharge);
+			printf("退费总金额: %.2lf 元\n", totalRefund);
 		}
 	}
 }
@@ -641,51 +610,6 @@ void totalMoney() {
 	}
 	printf("合计\t%.2lf\n", totalConsumption);
 }
-void checkUser()
-{
-	if (getCard() == FALSE)
-	{
-		return NULL;
-	}
-	char aName[20] = {0};
-	int i;
-	int flag = 0;
-	printf("请输入您要查询的账户:");
-	scanf("%s", aName);
-	lpCardNode pCur = NULL;
-	if (cardList != NULL)
-	{
-		pCur = cardList->next;
-		while (pCur != NULL)
-		{
-			if (strcmp(aName, pCur->data.aNum) == 0)
-			{
-				flag = 1;
-				if (pCur->data.Usecnt >= 1)
-				{
-					printf("用户名为：%s的卡信息如下\n", aName);
-					printf("上机时间\t\t\t下机时间\t\t\t使用金额\n");
-					for (i = 0; i < pCur->data.Usecnt; i++)
-					{
-						printf("%s\t\t%s\t\t%.2lf\n", pCur->data.everytime1[i], pCur->data.everytime2[i], pCur->data.everymoney[i]);
-					}
-					printf("该用户总使用次数为%d,账户余额为%.2lf\n", pCur->data.Usecnt, pCur->data.Balance);
-					if (pCur->data.nStatus == 2)
-						printf("该用户已注销！\n");
-				}
-				else
-				{
-					printf("该用户暂无使用记录\n");
-				}
-			}
-			pCur = pCur->next;
-		}
-		if (flag == 0)
-		{
-			printf("未查找到相关用户信息!\a\n");
-		}
-	}
-}
 
 Card* getlucky(const char* name, const char* code, int* nIndex)
 {
@@ -711,63 +635,3 @@ Card* getlucky(const char* name, const char* code, int* nIndex)
 	return NULL;
 }
 
-void checkdate()
-{
-
-	if (getCard() == FALSE)
-	{
-		return NULL;
-	}
-	char Btime[20] = { 0 };
-	char Etime[20] = { 0 };
-	char time1[20];
-	char time2[20];
-	int i=0;
-	int flag1 = 0;
-	int flag2 = 0;
-	int flag3 = 0;
-	double all = 0;
-	double mon = 0;
-	printf("请输入您要查询的开始日期（格式为YYYY-MM-DD）:");
-	scanf("%s", Btime);
-	printf("请输入您要查询的结束日期（格式为YYYY-MM-DD）:");
-	scanf("%s", Etime);
-	lpCardNode pCur = NULL;
-	if (cardList != NULL)
-	{
-		pCur = cardList->next;
-		while (pCur != NULL)
-		{
-			for (i = 0; i < pCur->data.Usecnt; i++)
-			{
-				if (strcmp(pCur->data.everytime3[i], Btime) >= 0 && strcmp(pCur->data.everytime4[i], Etime) <= 0)
-				{
-					mon += pCur->data.everymoney[i];
-					flag1 = 1;
-					flag3 = 1;
-				}
-			}
-			if (flag1 == 1 && flag2 == 0)
-			{
-				printf("账号\t消费\n");
-				flag2 = 1;
-			}
-			if (flag3 == 1)
-			{
-				printf("%s\t%.2lf\n", pCur->data.aNum, mon);
-				flag3 = 0;
-				all += mon;
-				mon = 0;
-			}
-			pCur = pCur->next;
-		}
-		if (flag1 == 0)
-		{
-			printf("该时间段内无用户!\n");
-		}
-	}
-	if (flag1 != 0)
-	{
-		printf("总消费金额为：%.2lf\n", all);
-	}
-}
